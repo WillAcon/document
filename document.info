@@ -1,0 +1,5 @@
+name = Register and send Document
+description = Form Required
+core = 7.x
+package = WEBOUT
+version = 7.1

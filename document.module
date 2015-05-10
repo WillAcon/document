@@ -1,0 +1,151 @@
+<?php
+// $roles = array(0=>'Mesa de partes',1=>'administrador',2=>'Oficinas');
+/**
+*
+*Implements hook_menu
+*/
+function document_menu(){
+    $items['ajax-event'] = array(
+    'page title' => t('Ajax evento'),
+    'page callback' => 'ipae_block_formularios_send_page',
+    'access callback' => TRUE,
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+return $items;
+}
+
+
+/**
+* Implements hook_form_alter
+*
+*/
+function document_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == "webform_client_form_1") {
+     _required_field_form($form);
+//dpm($form);
+    _add_script_document();
+    $form['actions']['reset'] = array(
+      '#type' => 'button',
+      '#value' => t('Cancel'),
+      '#weight' => 10,
+      '#validate' => array(),
+      '#attributes' => array('onclick' => 'alert("test");','id'=>'cancel_person'),
+    );
+  // $form['#submit'][] = 'document_submit_response';
+  }
+}
+function _add_script_document(){
+  $path = drupal_get_path('module', 'document');
+  drupal_add_library('angularjs', 'angularjs');
+  drupal_add_js($path . '/js/person.js');
+  drupal_add_js($path . '/js/angular-bootstrap.js');
+  drupal_add_js($path . '/js/ui-bootstrap-tpls.js');
+}
+
+function _required_field_form(&$form) {
+    $form['submitted']['box3']['#attributes'] +=  array('id' => 'persons-app','ng-controller'=>'personsController');  
+    
+    $form['submitted']['box3']['type_document']['#attributes'] += array('ng-model'=>'tipo','ng-click'=>'clear_type()');
+    //$form['submitted']['box3']['type_document']['#default_value'] = 10;
+    $form['submitted']['box1']['subject']['#attributes'] += array('required' => true);
+    $form['submitted']['box1']['type']['#attributes'] += array('required' => true);
+    $form['submitted']['box2']['office']['#attributes'] += array('required' => true);
+    $form['submitted']['box3']['documento']['#attributes'] += array('required' => true,'ng-model'=>'personas','typeahead'=>'p as p.node.dni for p in persons | filter:$viewValue | limitTo:10 | filter:tipo','typeahead-min-length'=>'1','typeahead-on-select'=>'onSelectPart($item, $model, $label)','typeahead-template-url'=>'persona.html');
+   
+    /*
+    $form['submitted']['box4']['descripcion'] = array(
+        '#type'=>'text_format',
+        '#base_type'=>'textarea',
+        '#format'=>'filtered_html',
+    );*/
+ 
+    
+   
+ 
+    
+    
+    /*
+         <input type="text" ng-model="paises" placeholder="Search Countries" 
+               typeahead="c as c.id for c in countries | filter:$viewValue | limitTo:10" 
+               typeahead-min-length='1' typeahead-on-select='onSelectPart($item, $model, $label)' 
+               typeahead-template-url="persona.html" class="form-control" style="width:350px;">
+    */
+    
+    
+    //$form['submitted']['box2']['office']['#attributes'] += array('multiple' => "",'required' => true);
+
+    //$form['submitted']['dni_ruc']['#attributes'] = array('class'=>'btn-danger');
+
+    //$form['submitted']['nombres']['#attributes'] = array('required' => true);  
+}
+
+/*
+* Function register document
+*/
+function _save_document(){
+ global $user;
+ $user = user_load($user->uid);
+ 
+ 
+
+}
+
+/**
+* Set data user
+*/
+function _get_data_user(){
+ global $user;
+ $data = user_load($user->uid);
+  
+ $user = array(
+    'uid' => $data->uid,
+    'username' => $data->name,
+    'mail' => $data->mail,
+    'status' => $data->status,
+    'roles' => $data->roles,
+    'oficina' => $data->field_oficina['und'][0]['tid'],
+    'nombre' => $data->field_nombre['und'][0]['value'],
+    'Apaterno' => $data->field_apellido_paterno['und'][0]['value'],
+    'Amaterno' => $data->field_apellido_materno['und'][0]['value'],
+    'dni' => $data->field_dni_ruc['und'][0]['value']
+ );
+
+ return $user;
+}
+/*
+* 
+*/
+function _is_registrar() {
+ global $user;
+ $user = user_load($user->uid);
+ $roles = array(0=>'Mesa de partes',1=>'administrador',2=>'Oficinas');
+
+  // Check to see if $user has the administrator role.
+ for($i=0; $i<count($roles);$i++) {
+     if(in_array($roles[$i], array_values($user->roles))){
+         return true;
+     }
+  }
+return false;    
+}
+
+
+function document_submit_response(&$form, &$form_state) {
+  dpm($form_state);
+  $node = new stdClass();
+  $node->type = "persona"; // Or any other content type you want
+  $node->title = $form_state['input']['submitted']['dni_ruc'];
+ // $node->language = LANGUAGE_NONE; // Or any language code if Locale module is enabled. More on this below *
+  //$node->path = array('alias' => 'your node path'); // Setting a node path
+  node_object_prepare($node); // Set some default values.
+  $node->uid = 1; // Or any id you wish
+  $node->field_nombres['und'][0]['value'] = $form_state['input']['submitted']['nombres'];
+  $node = node_submit($node); // Prepare node for a submit
+  node_save($node); // After this call we'll get a nid
+
+  //si acepta inscribirse en la charla vivencial
+  //$form_state['redirect'] = "node/add/documento";
+  //drupal_goto("thank-you/$nid");*/
+ // drupal_set_message(t('Tu mensaje ha sido enviado, correctamente..'));
+}
